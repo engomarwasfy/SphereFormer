@@ -48,11 +48,11 @@ def grid_sample(pos, batch, size, start, return_p2v=True, return_counts=True, re
 
 def get_indices_params(xyz, batch, window_size, shift_win: bool):
     
-    if isinstance(window_size, list) or isinstance(window_size, np.ndarray):
+    if isinstance(window_size, (list, np.ndarray)):
         window_size = torch.from_numpy(window_size).type_as(xyz).to(xyz.device)
     else:
         window_size = torch.tensor([window_size]*3).type_as(xyz).to(xyz.device)
-    
+
     if shift_win:
         v2p_map, k, counts = grid_sample(xyz+1/2*window_size, batch, window_size, start=xyz.min(0)[0], return_p2v=False, return_counts=True)
     else:

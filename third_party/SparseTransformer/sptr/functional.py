@@ -29,10 +29,10 @@ class AttentionStep1(Function):
             t = time.time()
 
         sptr_cuda.attention_step1_forward_cuda(N_q, N_k, M, h, hdim, n_max, q_transpose, k_transpose, index0, index1, output)
-        
+
         if DEBUG:
             torch.cuda.synchronize()
-            print("attn_step1: forward time: {}s, M: {}".format(time.time() - t, M))
+            print(f"attn_step1: forward time: {time.time() - t}s, M: {M}")
 
         output = output.permute(1,0).contiguous()
 
@@ -56,7 +56,7 @@ class AttentionStep1(Function):
         M, h = grad_output.shape
         hdim = q.shape[2]
         assert 512 % hdim == 0
-        
+
         grad_output = grad_output.contiguous()
         assert q.is_contiguous() and k.is_contiguous() and index0_offsets.is_contiguous() and index1.is_contiguous() and index1_offsets.is_contiguous() and grad_output.is_contiguous()
 
@@ -66,12 +66,12 @@ class AttentionStep1(Function):
         if DEBUG:
             torch.cuda.synchronize()
             t = time.time()
-        
+
         sptr_cuda.attention_step1_backward_cuda(N_q, M, h, hdim, n_max, grad_output, index0, index0_offsets, index1, index1_offsets, q, k, grad_q, grad_k)
-        
+
         if DEBUG:
             torch.cuda.synchronize()
-            print("attn_step1: backward time: {}s, M: {}".format(time.time() - t, M))
+            print(f"attn_step1: backward time: {time.time() - t}s, M: {M}")
 
         return grad_q, grad_k, None, None, None, None, None
 
@@ -93,17 +93,17 @@ class AttentionStep2(Function):
         if DEBUG:
             torch.cuda.synchronize()
             t = time.time()
-            
+
         output = torch.cuda.FloatTensor(N, h, hdim).zero_()
-        
+
         assert attn.shape[1] == h
         assert 512 % hdim == 0
-        
+
         sptr_cuda.attention_step2_forward_cuda(N, M, h, hdim, n_max, attn, v, index0_offsets, index1, output)
-        
+
         if DEBUG:
             torch.cuda.synchronize()
-            print("attn_step2: forward time: {}s, M: {}, h: {}".format(time.time() - t, M, h))
+            print(f"attn_step2: forward time: {time.time() - t}s, M: {M}, h: {h}")
 
         ctx.n_max = n_max
         ctx.save_for_backward(attn, v, index0, index0_offsets, index1, index1_offsets)
@@ -132,12 +132,12 @@ class AttentionStep2(Function):
         if DEBUG:
             torch.cuda.synchronize()
             t = time.time()
-        
+
         sptr_cuda.attention_step2_backward_cuda(N, M, h, hdim, n_max, grad_output, index0, index0_offsets, index1, index1_offsets, attn, v, grad_attn, grad_v)
-        
+
         if DEBUG:
             torch.cuda.synchronize()
-            print("attn_step2: backward time: {}s, M: {}, h: {}".format(time.time() - t, M, h))
+            print(f"attn_step2: backward time: {time.time() - t}s, M: {M}, h: {h}")
 
         return grad_attn, grad_v, None, None, None, None, None
 
@@ -180,7 +180,7 @@ class DotProdWithIdx(Function):
         L = table_q.shape[0]
         assert table_k.shape[0] == L
 
-        assert L > rel_idx.max(), "L = {}, while rel_idx.max() = {}".format(L, rel_idx.max())
+        assert L > rel_idx.max(), f"L = {L}, while rel_idx.max() = {rel_idx.max()}"
         assert L <= 50
 
         if DEBUG:
@@ -188,7 +188,7 @@ class DotProdWithIdx(Function):
             t = time.time()
 
         output = torch.cuda.FloatTensor(h, M).zero_()
-        
+
         q_transpose = q.permute(1,2,0).contiguous() #[h, hdim, L]
         k_transpose = k.permute(1,2,0).contiguous() #[h, hdim, L]
         table_q_transpose = table_q.permute(2,3,1,0).contiguous() #[h, hdim, 3, L]
@@ -196,13 +196,13 @@ class DotProdWithIdx(Function):
         rel_idx_transpose = rel_idx.permute(1,0).contiguous() #[3, M]
 
         sptr_cuda.dot_prod_with_idx_forward_cuda(N, M, h, hdim, n_max, L, q_transpose, index_q, index_q_offsets, k_transpose, index_k, table_q_transpose, table_k_transpose, rel_idx_transpose, output)
-        
+
         output = output.permute(1,0).contiguous()
 
         if DEBUG:
             torch.cuda.synchronize()
-            print("dot_prod_with_idx: forward time: {}s, M: {}".format(time.time() - t, M))
-        
+            print(f"dot_prod_with_idx: forward time: {time.time() - t}s, M: {M}")
+
         ctx.n_max = n_max
         ctx.save_for_backward(q, index_q_offsets, k, index_k_offsets, index_k, table_q, table_k, rel_idx)
         return output
@@ -219,7 +219,7 @@ class DotProdWithIdx(Function):
         L = table_q.shape[0]
         n_max = ctx.n_max
         N_k = k.shape[0]
-        
+
         grad_output = grad_output.contiguous()
         assert q.is_contiguous() and index_q_offsets.is_contiguous() and k.is_contiguous() and index_k_offsets.is_contiguous() and index_k.is_contiguous() and table_q.is_contiguous() and table_k.is_contiguous() and rel_idx.is_contiguous() and grad_output.is_contiguous()
 
@@ -234,13 +234,13 @@ class DotProdWithIdx(Function):
         if DEBUG:
             torch.cuda.synchronize()
             t = time.time()
-        
+
         sptr_cuda.dot_prod_with_idx_backward_cuda(N, M, h, hdim, n_max, L, grad_output, q, index_q_offsets, k, index_k_offsets, index_k, table_q, table_k, rel_idx, grad_q, grad_k, grad_table_q, grad_table_k)
-        
+
         if DEBUG:
             torch.cuda.synchronize()
-            print("dot_prod_with_idx: backward time: {}s, M: {}".format(time.time() - t, M))
-        
+            print(f"dot_prod_with_idx: backward time: {time.time() - t}s, M: {M}")
+
         return grad_q, None, None, None, grad_k, None, None, grad_table_q, grad_table_k, None
 
 dot_prod_with_idx = DotProdWithIdx.apply
@@ -259,7 +259,7 @@ class DotProdWithIdxAll(Function):
         L = table_q.shape[0]
         assert table_k.shape[0] == L
         assert q.shape[0] == k.shape[0]
-        assert L > rel_idx.max(), "L = {}, while rel_idx.max() = {}".format(L, rel_idx.max())
+        assert L > rel_idx.max(), f"L = {L}, while rel_idx.max() = {rel_idx.max()}"
         assert L <= 50
 
         if DEBUG:
@@ -267,7 +267,7 @@ class DotProdWithIdxAll(Function):
             t = time.time()
 
         output = torch.cuda.FloatTensor(h, M).zero_()
-        
+
         q_transpose = q.permute(1,2,0).contiguous() #[h, hdim, L]
         k_transpose = k.permute(1,2,0).contiguous() #[h, hdim, L]
         table_q_transpose = table_q.permute(2,3,1,0).contiguous() #[h, hdim, 3, L]
@@ -275,13 +275,13 @@ class DotProdWithIdxAll(Function):
         rel_idx_transpose = rel_idx.permute(1,0).contiguous() #[3, M]
 
         sptr_cuda.dot_prod_with_idx_all_forward_cuda(N, M, h, hdim, n_max, L, q_transpose, index_q, index_q_offsets, k_transpose, index_k, table_q_transpose, table_k_transpose, rel_idx_transpose, output)
-        
+
         output = output.permute(1,0).contiguous()
 
         if DEBUG:
             torch.cuda.synchronize()
-            print("dot_prod_with_idx_all: forward time: {}s, M: {}".format(time.time() - t, M))
-        
+            print(f"dot_prod_with_idx_all: forward time: {time.time() - t}s, M: {M}")
+
         ctx.n_max = n_max
         ctx.save_for_backward(q, index_q_offsets, index_q, k, index_k_offsets, index_k, table_q, table_k, rel_idx)
         return output
@@ -298,7 +298,7 @@ class DotProdWithIdxAll(Function):
         L = table_q.shape[0]
         n_max = ctx.n_max
         N_k = k.shape[0]
-        
+
         grad_output = grad_output.contiguous()
         assert q.is_contiguous() and index_q_offsets.is_contiguous() and index_q.is_contiguous() and k.is_contiguous() and index_k_offsets.is_contiguous() and index_k.is_contiguous() and table_q.is_contiguous() and table_k.is_contiguous() and rel_idx.is_contiguous() and grad_output.is_contiguous()
 
@@ -313,21 +313,21 @@ class DotProdWithIdxAll(Function):
         if DEBUG:
             torch.cuda.synchronize()
             t = time.time()
-        
+
         sptr_cuda.dot_prod_with_idx_backward_cuda(N, M, h, hdim, n_max, L, grad_output, q, index_q_offsets, k, index_k_offsets, index_k, table_q, table_k, rel_idx, grad_q, grad_k, grad_table_q, grad_table_k)
-        
+
         grad_q_2 = torch.cuda.FloatTensor(N, h, hdim).zero_()
         grad_k_2 = torch.cuda.FloatTensor(N, h, hdim).zero_()
 
         sptr_cuda.attention_step1_backward_cuda(N, M, h, hdim, n_max, grad_output, index_q, index_q_offsets, index_k, index_k_offsets, q, k, grad_q_2, grad_k_2)
-        
+
         grad_q += grad_q_2
         grad_k += grad_k_2
 
         if DEBUG:
             torch.cuda.synchronize()
-            print("dot_prod_with_idx_all: backward time: {}s, M: {}".format(time.time() - t, M))
-        
+            print(f"dot_prod_with_idx_all: backward time: {time.time() - t}s, M: {M}")
+
         return grad_q, None, None, grad_k, None, None, grad_table_q, grad_table_k, None, None
 
 dot_prod_with_idx_all = DotProdWithIdxAll.apply
@@ -349,17 +349,19 @@ class AttentionStep2WithRelPosValue(Function):
         if DEBUG:
             torch.cuda.synchronize()
             t = time.time()
-            
+
         output = torch.cuda.FloatTensor(N, h, hdim).zero_()
-        
+
         assert hdim == 16
         assert L <= 50
 
         sptr_cuda.attention_step2_with_rel_pos_value_forward_cuda(N, M, h, hdim, n_max, attn, v, index0_offsets, index1, table, rel_idx, output)
-        
+
         if DEBUG:
             torch.cuda.synchronize()
-            print("attn_step2_with_rel_pos_value: forward time: {}s, M: {}, h: {}".format(time.time() - t, M, h))
+            print(
+                f"attn_step2_with_rel_pos_value: forward time: {time.time() - t}s, M: {M}, h: {h}"
+            )
 
         ctx.n_max = n_max
         ctx.save_for_backward(attn, v, index0, index0_offsets, index1, index1_offsets, table, rel_idx)
@@ -385,7 +387,7 @@ class AttentionStep2WithRelPosValue(Function):
         grad_attn = torch.cuda.FloatTensor(M, h).zero_()
         grad_v = torch.cuda.FloatTensor(N_k, h, hdim).zero_()
         grad_table = torch.cuda.FloatTensor(L, 3, h, hdim).zero_()
-        
+
         table = table.permute(2,3,1,0).contiguous() #[h, hdim, 3, L]
         v = v.permute(1,2,0).contiguous()
         rel_idx = rel_idx.permute(1,0).contiguous()
@@ -393,12 +395,14 @@ class AttentionStep2WithRelPosValue(Function):
         if DEBUG:
             torch.cuda.synchronize()
             t = time.time()
-        
+
         sptr_cuda.attention_step2_with_rel_pos_value_backward_cuda(N, M, h, hdim, L, n_max, grad_output, index0, index0_offsets, index1, index1_offsets, attn, v, table, rel_idx, grad_attn, grad_v, grad_table)
-        
+
         if DEBUG:
             torch.cuda.synchronize()
-            print("attn_step2_with_rel_pos_value: backward time: {}s, M: {}, h: {}".format(time.time() - t, M, h))
+            print(
+                f"attn_step2_with_rel_pos_value: backward time: {time.time() - t}s, M: {M}, h: {h}"
+            )
 
         return grad_attn, grad_v, None, None, None, None, None, grad_table, None
 

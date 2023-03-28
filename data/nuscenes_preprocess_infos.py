@@ -102,10 +102,7 @@ def quaternion_yaw(q: Quaternion) -> float:
     # Project into xy plane.
     v = np.dot(q.rotation_matrix, np.array([1, 0, 0]))
 
-    # Measure yaw using arctan.
-    yaw = np.arctan2(v[1], v[0])
-
-    return yaw
+    return np.arctan2(v[1], v[0])
 
 def fill_trainval_infos(data_path, nusc, train_scenes, val_scenes, test=False):
     train_nusc_infos = []
@@ -188,36 +185,33 @@ def fill_trainval_infos(data_path, nusc, train_scenes, val_scenes, test=False):
 def get_available_scenes(nusc):
     available_scenes = []
     print('total scene num:', len(nusc.scene))
+    has_more_frames = True
     for scene in nusc.scene:
         scene_token = scene['token']
         scene_rec = nusc.get('scene', scene_token)
         sample_rec = nusc.get('sample', scene_rec['first_sample_token'])
         sd_rec = nusc.get('sample_data', sample_rec['data']['LIDAR_TOP'])
-        has_more_frames = True
         scene_not_exist = False
         while has_more_frames:
             lidar_path, boxes, _ = nusc.get_sample_data(sd_rec['token'])
             if not Path(lidar_path).exists():
                 scene_not_exist = True
-                break
-            else:
-                break
-        if scene_not_exist:
-            continue
-        available_scenes.append(scene)
+            break
+        if not scene_not_exist:
+            available_scenes.append(scene)
     print('exist scene num:', len(available_scenes))
     return available_scenes
 
 assert version in ['v1.0-trainval', 'v1.0-test', 'v1.0-mini']
-if version == 'v1.0-trainval':
-    train_scenes = splits.train
-    val_scenes = splits.val
+if version == 'v1.0-mini':
+    train_scenes = splits.mini_train
+    val_scenes = splits.mini_val
 elif version == 'v1.0-test':
     train_scenes = splits.test
     val_scenes = []
-elif version == 'v1.0-mini':
-    train_scenes = splits.mini_train
-    val_scenes = splits.mini_val
+elif version == 'v1.0-trainval':
+    train_scenes = splits.train
+    val_scenes = splits.val
 else:
     raise NotImplementedError
 
@@ -226,13 +220,19 @@ available_scenes = get_available_scenes(nusc)
 available_scene_names = [s['name'] for s in available_scenes]
 train_scenes = list(filter(lambda x: x in available_scene_names, train_scenes))
 val_scenes = list(filter(lambda x: x in available_scene_names, val_scenes))
-train_scenes = set([available_scenes[available_scene_names.index(s)]['token'] for s in train_scenes])
-val_scenes = set([available_scenes[available_scene_names.index(s)]['token'] for s in val_scenes])
+train_scenes = {
+    available_scenes[available_scene_names.index(s)]['token']
+    for s in train_scenes
+}
+val_scenes = {
+    available_scenes[available_scene_names.index(s)]['token']
+    for s in val_scenes
+}
 
 print('%s: train scene(%d), val scene(%d)' % (version, len(train_scenes), len(val_scenes)))
 
 train_nusc_infos, val_nusc_infos = fill_trainval_infos(data_path, nusc, train_scenes, val_scenes)
-with open("{}/nuscenes_seg_infos_1sweeps_train.pkl".format(save_dir), 'wb') as f:
+with open(f"{save_dir}/nuscenes_seg_infos_1sweeps_train.pkl", 'wb') as f:
     pickle.dump(train_nusc_infos, f)
-with open("{}/nuscenes_seg_infos_1sweeps_val.pkl".format(save_dir), 'wb') as f:
+with open(f"{save_dir}/nuscenes_seg_infos_1sweeps_val.pkl", 'wb') as f:
     pickle.dump(val_nusc_infos, f)

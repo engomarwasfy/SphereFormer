@@ -140,7 +140,7 @@ class VarLengthMultiheadSA(nn.Module):
                 pos_emb_i = self.pos_enc(xyz_i[None, ...], 
                                     input_range=[min_i[None, ...], max_i[None, ...]])
                 pos_emb.append(pos_emb_i[0].permute(1,0).contiguous())
-                
+
             pos_emb = torch.cat(pos_emb, 0)
 
             query += pos_emb
@@ -149,19 +149,21 @@ class VarLengthMultiheadSA(nn.Module):
         assert xyz.shape[1] == 3
 
         N, C = query.shape
-        
+
         query = self.q(query).reshape(N, self.num_heads, C // self.num_heads)
         key = self.k(key).reshape(N, self.num_heads, C // self.num_heads)
         value = self.v(value).reshape(N, self.num_heads, C // self.num_heads)
         query = query * self.scale
-        
+
         index_params = sptr_tensor.find_indice_params(self.indice_key)
         if index_params is None:
             index_0, index_0_offsets, n_max, index_1, index_1_offsets, sort_idx = get_indices_params(xyz, batch, self.window_size, self.shift_win)
             sptr_tensor.indice_dict[self.indice_key] = (index_0, index_0_offsets, n_max, index_1, index_1_offsets, sort_idx, self.window_size, self.shift_win)
         else:
             index_0, index_0_offsets, n_max, index_1, index_1_offsets, sort_idx, window_size, shift_win = index_params
-            assert (window_size == self.window_size) and (shift_win == self.shift_win), "window_size and shift_win must be the same for sptr_tensors with the same indice_key: {}".format(self.indice_key)
+            assert (window_size == self.window_size) and (
+                shift_win == self.shift_win
+            ), f"window_size and shift_win must be the same for sptr_tensors with the same indice_key: {self.indice_key}"
 
         kwargs = {"query": query.float(),
             "key": key.float(), 
@@ -177,7 +179,7 @@ class VarLengthMultiheadSA(nn.Module):
             "shift_win": self.shift_win
         }
         if self.pe_type == 'contextual':
-            kwargs.update({
+            kwargs |= {
                 "rel_query": self.rel_query,
                 "rel_key": self.rel_key,
                 "rel_value": self.rel_value,
@@ -185,8 +187,8 @@ class VarLengthMultiheadSA(nn.Module):
                 "quant_grid_length": self.quant_grid_length,
                 "relative_pos_query_table": self.relative_pos_query_table.float(),
                 "relative_pos_key_table": self.relative_pos_key_table.float(),
-                "relative_pos_value_table": self.relative_pos_value_table.float()
-            })
+                "relative_pos_value_table": self.relative_pos_value_table.float(),
+            }
 
         x = sparse_self_attention(**kwargs)
         x = x.view(N, C)
@@ -194,7 +196,10 @@ class VarLengthMultiheadSA(nn.Module):
         x = self.proj(x)
         x = self.proj_drop(x) #[N, C]
 
-        output_tensor = SparseTrTensor(x, sptr_tensor.query_indices, sptr_tensor.spatial_shape, sptr_tensor.batch_size)
-
-        return output_tensor
+        return SparseTrTensor(
+            x,
+            sptr_tensor.query_indices,
+            sptr_tensor.spatial_shape,
+            sptr_tensor.batch_size,
+        )
 

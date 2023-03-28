@@ -45,11 +45,9 @@ class Waymo2SemanticKITTI(object):
         # point labels.
 
         points_all = np.concatenate([points_all, points_all_ri2], axis=0)
-        
+
         velodyne = np.c_[points_all[:,3:6], points_all[:,1]]
-        velodyne = velodyne.reshape((velodyne.shape[0] * velodyne.shape[1]))
-        
-        return velodyne
+        return velodyne.reshape((velodyne.shape[0] * velodyne.shape[1]))
 
     
     def create_label(self, frame):
@@ -65,25 +63,27 @@ class Waymo2SemanticKITTI(object):
         point_labels_all_ri2 = np.concatenate(point_labels_ri2, axis=0)
         point_labels_all = np.concatenate([point_labels_all, point_labels_all_ri2], axis=0)
 
-        labels = point_labels_all
-
-        return labels
+        return point_labels_all
     
     def create_images(self, frame):
         images = {}
-        for index, image in enumerate(frame.images):
+        for image in frame.images:
             img = tf.image.decode_jpeg(image.image).numpy()
             img_type = open_dataset.CameraName.Name.Name(image.name).lower()
             images[img_type] = img
         return images
 
     def convert_one(self, frame, dir_idx, file_idx, test=False):
-        lidar_save_path = os.path.join(self.save_dir, dir_idx, 'velodyne', file_idx+'.bin')
+        lidar_save_path = os.path.join(
+            self.save_dir, dir_idx, 'velodyne', f'{file_idx}.bin'
+        )
         point_cloud = self.create_lidar(frame)
         point_cloud.astype(np.float32).tofile(lidar_save_path)
 
         if test == False:
-            label_save_path = os.path.join(self.save_dir, dir_idx, 'labels', file_idx+'.label')
+            label_save_path = os.path.join(
+                self.save_dir, dir_idx, 'labels', f'{file_idx}.label'
+            )
             label = self.create_label(frame)
             label.tofile(label_save_path)
     
@@ -128,14 +128,12 @@ class Waymo2SemanticKITTI(object):
         self.data_dir_list = []
         start_idx = 0
         for dataset_type in datasets:
-            print("Converting " + dataset_type + " set") 
+            print(f"Converting {dataset_type} set")
             data_dir = os.path.join(self.load_dir, dataset_type)
 
             files = []
-            with open("{}_list.txt".format(dataset_type), "r") as f:
-                for line in f.readlines():
-                    files.append(line.strip())
-
+            with open(f"{dataset_type}_list.txt", "r") as f:
+                files.extend(line.strip() for line in f)
             self.files.extend(files)
             self.data_dir_list.extend([data_dir]*len(files))
 
@@ -151,7 +149,7 @@ class Waymo2SemanticKITTI(object):
 
         start_idx = 0
         for dataset_type in datasets:
-            print("Converting " + dataset_type + " set") 
+            print(f"Converting {dataset_type} set")
             data_dir = os.path.join(self.load_dir, dataset_type)
 
             for file_name in os.listdir(data_dir):
@@ -184,7 +182,7 @@ class Waymo2SemanticKITTI(object):
                         self.convert_one(frame, dir_idx, file_idx)
                         count += 1
                 start_idx += 1
-        
+
         return True
                 
 

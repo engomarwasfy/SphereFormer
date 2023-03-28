@@ -1,8 +1,8 @@
 import torch
 import pointops
 from torch_scatter import scatter_max, scatter_mean, scatter_add, scatter_min, scatter_sum
-import sys 
-sys.path.append("..") 
+import sys
+sys.path.append("..")
 import sptr
 
 torch.manual_seed(2)
@@ -71,8 +71,8 @@ index_0, index_1 = pointops.precompute_index_pairs(p2v_map, counts, index_0_offs
 index_0 = index_0.long()
 index_1 = index_1.long()
 
-print("index_0: {}".format(index_0))
-print("index_1: {}".format(index_1))
+print(f"index_0: {index_0}")
+print(f"index_1: {index_1}")
 
 # print("index_0.max(): {}, index_0.min(): {}".format(index_0.max(), index_0.min()))
 

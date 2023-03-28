@@ -7,7 +7,7 @@ from util.voxelize import voxelize
 def collate_fn_limit(batch, max_batch_points, logger):
     coord, xyz, feat, label = list(zip(*batch))
     offset, count = [], 0
-    
+
     new_coord, new_xyz, new_feat, new_label = [], [], [], []
     k = 0
     for i, item in enumerate(xyz):
@@ -24,9 +24,11 @@ def collate_fn_limit(batch, max_batch_points, logger):
         new_label.append(label[i])
 
     if logger is not None and k < len(batch):
-        s = sum([x.shape[0] for x in xyz])
-        s_now = sum([x.shape[0] for x in new_xyz[:k]])
-        logger.warning("batch_size shortened from {} to {}, points from {} to {}".format(len(batch), k, s, s_now))
+        s = sum(x.shape[0] for x in xyz)
+        s_now = sum(x.shape[0] for x in new_xyz[:k])
+        logger.warning(
+            f"batch_size shortened from {len(batch)} to {k}, points from {s} to {s_now}"
+        )
 
     return torch.cat(new_coord[:k]), torch.cat(new_xyz[:k]), torch.cat(new_feat[:k]), torch.cat(new_label[:k]), torch.IntTensor(offset[:k])
     

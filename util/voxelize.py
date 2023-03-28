@@ -46,11 +46,13 @@ def voxelize(coord, voxel_size=0.05, hash_type='fnv', mode=0):
     key_sort = key[idx_sort]
     _, count = np.unique(key_sort, return_counts=True)
     if mode == 0:  # train mode
-        idx_select = np.cumsum(np.insert(count, 0, 0)[0:-1]) + np.random.randint(0, count.max(), count.size) % count
-        idx_unique = idx_sort[idx_select]
-        return idx_unique
+        idx_select = (
+            np.cumsum(np.insert(count, 0, 0)[:-1])
+            + np.random.randint(0, count.max(), count.size) % count
+        )
+        return idx_sort[idx_select]
     else:  # val mode
-        idx_start = np.cumsum(np.insert(count, 0, 0)[0:-1])
+        idx_start = np.cumsum(np.insert(count, 0, 0)[:-1])
         idx_select = idx_start# + np.random.randint(0, count.max(), count.size) % count
         # idx_unique = idx_sort[idx_select]
         sorted_idx = np.zeros(key.shape[0]).astype(np.int)

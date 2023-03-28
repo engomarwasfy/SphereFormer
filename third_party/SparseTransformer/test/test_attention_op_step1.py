@@ -1,8 +1,8 @@
 import torch
 import pointops
 from torch_scatter import scatter_max, scatter_mean, scatter_add, scatter_min, scatter_sum
-import sys 
-sys.path.append("..") 
+import sys
+sys.path.append("..")
 import sptr
 
 torch.manual_seed(1)
@@ -59,7 +59,9 @@ key.requires_grad = True
 attn_flat = pointops.attention_step1(query.float(), key.float(), index_0.int(), index_1.int())
 loss = attn_flat.sum()
 loss.backward()
-print("attn_flat.shape: {}, attn_flat[:20,:10]: {}".format(attn_flat.shape, attn_flat[:20,:10]))
+print(
+    f"attn_flat.shape: {attn_flat.shape}, attn_flat[:20,:10]: {attn_flat[:20, :10]}"
+)
 print("query.grad[:5, :3, :5]: ", query.grad[:5, :3, :5])
 print("key.grad[:5, :3, :5]: ", key.grad[:5, :3, :5])
 # input()
@@ -103,7 +105,9 @@ loss.backward()
 # loss = attn_flat_v2.sum()
 # loss.backward()
 
-print("attn_flat_v2.shape: {}, attn_flat_v2[:20,:10]: {}".format(attn_flat_v2.shape, attn_flat_v2[:20,:10]))
+print(
+    f"attn_flat_v2.shape: {attn_flat_v2.shape}, attn_flat_v2[:20,:10]: {attn_flat_v2[:20, :10]}"
+)
 print("query.grad[:5, :3, :5]: ", query.grad[:5, :3, :5])
 print("key.grad[:5, :3, :5]: ", key.grad[:5, :3, :5])
 # input()
