@@ -160,7 +160,7 @@ class SparseMultiheadSASphereConcat(nn.Module):
         assert xyz.shape[1] == 3
 
         N, C = query.shape
-        
+
         qkv = self.qkv(query).reshape(N, 3, self.num_heads, C // self.num_heads).permute(1, 0, 2, 3).contiguous()
         query, key, value = qkv[0], qkv[1], qkv[2] #[N, num_heads, C//num_heads]
         query = query * self.scale
@@ -198,9 +198,13 @@ class SparseMultiheadSASphereConcat(nn.Module):
             )
         else:
             index_0, index_0_offsets, n_max, index_1, index_1_offsets, sort_idx, window_size, shift_win, \
-                index_0_sphere, index_0_offsets_sphere, n_max_sphere, index_1_sphere, index_1_offsets_sphere, sort_idx_sphere = index_params
-            assert (window_size == self.window_size) and (shift_win == self.shift_win), "window_size and shift_win must be the same for sptr_tensors with the same indice_key: {}".format(self.indice_key)
-            assert (window_size_sphere == self.window_size_sphere), "window_size and shift_win must be the same for sptr_tensors with the same indice_key: {}".format(self.indice_key)
+                    index_0_sphere, index_0_offsets_sphere, n_max_sphere, index_1_sphere, index_1_offsets_sphere, sort_idx_sphere = index_params
+            assert (window_size == self.window_size) and (
+                shift_win == self.shift_win
+            ), f"window_size and shift_win must be the same for sptr_tensors with the same indice_key: {self.indice_key}"
+            assert (
+                window_size_sphere == self.window_size_sphere
+            ), f"window_size and shift_win must be the same for sptr_tensors with the same indice_key: {self.indice_key}"
 
         kwargs = {"query": query[:, :self.num_heads_brc1].contiguous().float(),
             "key": key[:, :self.num_heads_brc1].contiguous().float(), 
@@ -217,7 +221,7 @@ class SparseMultiheadSASphereConcat(nn.Module):
             "pe_type": self.pe_type,
         }
         if self.pe_type == 'contextual':
-            kwargs.update({
+            kwargs |= {
                 "rel_query": self.rel_query,
                 "rel_key": self.rel_key,
                 "rel_value": self.rel_value,
@@ -225,8 +229,8 @@ class SparseMultiheadSASphereConcat(nn.Module):
                 "quant_grid_length": self.quant_grid_length,
                 "relative_pos_query_table": self.relative_pos_query_table.float(),
                 "relative_pos_key_table": self.relative_pos_key_table.float(),
-                "relative_pos_value_table": self.relative_pos_value_table.float()
-            })
+                "relative_pos_value_table": self.relative_pos_value_table.float(),
+            }
         out1 = sparse_self_attention(**kwargs)
 
         kwargs = {"query": query[:, self.num_heads_brc1:].contiguous().float(),
@@ -244,7 +248,7 @@ class SparseMultiheadSASphereConcat(nn.Module):
             "pe_type": self.pe_type,
         }
         if self.pe_type == 'contextual':
-            kwargs.update({
+            kwargs |= {
                 "rel_query": self.rel_query,
                 "rel_key": self.rel_key,
                 "rel_value": self.rel_value,
@@ -254,7 +258,7 @@ class SparseMultiheadSASphereConcat(nn.Module):
                 "relative_pos_key_table": self.relative_pos_key_table_sphere.float(),
                 "relative_pos_value_table": self.relative_pos_value_table_sphere.float(),
                 "split_func": partial(exponential_split, a=self.a),
-            })
+            }
         out2 = sparse_self_attention(**kwargs)
 
         x = torch.cat([out1, out2], 1).view(N, C)
@@ -262,9 +266,12 @@ class SparseMultiheadSASphereConcat(nn.Module):
         x = self.proj(x)
         x = self.proj_drop(x) #[N, C]
 
-        output_tensor = SparseTrTensor(x, sptr_tensor.query_indices, sptr_tensor.spatial_shape, sptr_tensor.batch_size)
-
-        return output_tensor
+        return SparseTrTensor(
+            x,
+            sptr_tensor.query_indices,
+            sptr_tensor.spatial_shape,
+            sptr_tensor.batch_size,
+        )
 
 
 class SphereFormer(nn.Module):

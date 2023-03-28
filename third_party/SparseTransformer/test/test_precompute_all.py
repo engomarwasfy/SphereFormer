@@ -1,7 +1,7 @@
 import torch
 import pointops
-import sys 
-sys.path.append("..") 
+import sys
+sys.path.append("..")
 import sptr
 
 torch.manual_seed(1)
@@ -24,7 +24,7 @@ counts = torch.IntTensor([3, 2, 6]).cuda()
 
 # N = v2p_map.shape[0]
 
-print("v2p_map.shape: {}, p2v_map.shape: {}".format(v2p_map.shape, p2v_map.shape))
+print(f"v2p_map.shape: {v2p_map.shape}, p2v_map.shape: {p2v_map.shape}")
 
 v2p_map, ctg_sort_idx = v2p_map.sort()
 n, k = p2v_map.shape
@@ -74,9 +74,13 @@ print("index_0_offsets_: ", index_0_offsets_)
 print("ctg_index_1_offsets: ", ctg_index_1_offsets)
 print("index_1_offsets_: ", index_1_offsets_)
 
-print("index_0_offsets.shape: {}, index_0_offsets_.shape: {}".format(index_0_offsets.shape, index_0_offsets_.shape))
+print(
+    f"index_0_offsets.shape: {index_0_offsets.shape}, index_0_offsets_.shape: {index_0_offsets_.shape}"
+)
 
-print("ctg_index_1_offsets.shape: {}, index_1_offsets_.shape: {}".format(ctg_index_1_offsets.shape, index_1_offsets_.shape))
+print(
+    f"ctg_index_1_offsets.shape: {ctg_index_1_offsets.shape}, index_1_offsets_.shape: {index_1_offsets_.shape}"
+)
 
 # print("index_0: ", index_0)
 # print("index_0_: ", index_0_)

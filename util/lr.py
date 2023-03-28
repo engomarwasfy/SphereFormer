@@ -134,7 +134,7 @@ if __name__ == '__main__':
   lr_list = []
   for epoch in range(max(last_step + 1, 0), min(max_iter, 100)):
     lrs = ', '.join(['{:.5e}'.format(x) for x in scheduler.get_last_lr()])
-    print('epoch {} lrs {}'.format(epoch, lrs))
+    print(f'epoch {epoch} lrs {lrs}')
     lr_list.append(scheduler.get_last_lr()[0])
     scheduler.step()
 

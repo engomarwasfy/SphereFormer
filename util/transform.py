@@ -15,7 +15,7 @@ class RandomShift_test(object):
         return points, color
 
     def __repr__(self):
-        return 'RandomShift(shift_range: {})'.format(self.shift_range)
+        return f'RandomShift(shift_range: {self.shift_range})'
 
 class Compose(object):
     def __init__(self, transforms):
@@ -63,7 +63,7 @@ class RandomRotate(object):
         return points, color
     
     def __repr__(self):
-        return 'RandomRotate(rotate_angle: {}, along_z: {})'.format(self.rotate_angle, self.along_z)
+        return f'RandomRotate(rotate_angle: {self.rotate_angle}, along_z: {self.along_z})'
 
 
 class RandomRotatePerturbation(object):
@@ -100,7 +100,7 @@ class RandomScale(object):
         return points, color
 
     def __repr__(self):
-        return 'RandomScale(scale_low: {}, scale_high: {})'.format(self.scale_low, self.scale_high)
+        return f'RandomScale(scale_low: {self.scale_low}, scale_high: {self.scale_high})'
 
 
 class RandomShift(object):
@@ -113,7 +113,7 @@ class RandomShift(object):
         return points, color
 
     def __repr__(self):
-        return 'RandomShift(shift_range: {})'.format(self.shift_range)
+        return f'RandomShift(shift_range: {self.shift_range})'
 
 
 class RandomJitter(object):
@@ -128,7 +128,7 @@ class RandomJitter(object):
         return points, color
     
     def __repr__(self):
-        return 'RandomJitter(sigma: {}, clip: {})'.format(self.sigma, self.clip)
+        return f'RandomJitter(sigma: {self.sigma}, clip: {self.clip})'
 
 
 # class ChromaticAutoContrast(object):
@@ -245,7 +245,7 @@ class RandomDropColor(object):
         return points, color
 
     def __repr__(self):
-        return 'RandomDropColor(color_augment: {}, p: {})'.format(self.color_augment, self.p)
+        return f'RandomDropColor(color_augment: {self.color_augment}, p: {self.p})'
 
         
 class ElasticDistortion:
@@ -286,10 +286,9 @@ class ElasticDistortion:
         return coords
 
     def __call__(self, points, color):
-        if self.distortion_params is not None:
-            if random.random() < 0.95:
-                for granularity, magnitude in self.distortion_params:
-                    points = self.elastic_distortion(points, granularity, magnitude)
+        if self.distortion_params is not None and random.random() < 0.95:
+            for granularity, magnitude in self.distortion_params:
+                points = self.elastic_distortion(points, granularity, magnitude)
         return points, color
 
 class RandomHorizontalFlip(object):
@@ -302,7 +301,7 @@ class RandomHorizontalFlip(object):
         self.D = 4 if is_temporal else 3
         self.upright_axis = {'x': 0, 'y': 1, 'z': 2}[upright_axis.lower()]
         # Use the rest of axes for flipping.
-        self.horz_axes = set(range(self.D)) - set([self.upright_axis])
+        self.horz_axes = set(range(self.D)) - {self.upright_axis}
 
     def __call__(self, coords, feats):
         if random.random() < 0.95:

@@ -87,7 +87,12 @@ class UBlock(nn.Module):
         self.grad_checkpoint_layers = grad_checkpoint_layers
         self.sphere_layers = sphere_layers
 
-        blocks = {'block{}'.format(i): block(nPlanes[0], nPlanes[0], norm_fn, indice_key='subm{}'.format(indice_key_id)) for i in range(block_reps)}
+        blocks = {
+            f'block{i}': block(
+                nPlanes[0], nPlanes[0], norm_fn, indice_key=f'subm{indice_key_id}'
+            )
+            for i in range(block_reps)
+        }
         blocks = OrderedDict(blocks)
         self.blocks = spconv.SparseSequential(blocks)
 
@@ -96,16 +101,16 @@ class UBlock(nn.Module):
             self.window_size_sphere = window_size_sphere
             num_heads = nPlanes[0] // head_dim
             self.transformer_block = SphereFormer(
-                nPlanes[0], 
-                num_heads, 
-                window_size, 
-                window_size_sphere, 
-                quant_size, 
+                nPlanes[0],
+                num_heads,
+                window_size,
+                window_size_sphere,
+                quant_size,
                 quant_size_sphere,
-                indice_key='sphereformer{}'.format(indice_key_id),
-                rel_query=rel_query, 
-                rel_key=rel_key, 
-                rel_value=rel_value, 
+                indice_key=f'sphereformer{indice_key_id}',
+                rel_query=rel_query,
+                rel_key=rel_key,
+                rel_value=rel_value,
                 drop_path=drop_path[0],
                 a=a,
             )
@@ -114,7 +119,15 @@ class UBlock(nn.Module):
             self.conv = spconv.SparseSequential(
                 norm_fn(nPlanes[0]),
                 nn.ReLU(),
-                spconv.SparseConv3d(nPlanes[0], nPlanes[1], kernel_size=2, stride=2, bias=False, indice_key='spconv{}'.format(indice_key_id), algo=ConvAlgo.Native)
+                spconv.SparseConv3d(
+                    nPlanes[0],
+                    nPlanes[1],
+                    kernel_size=2,
+                    stride=2,
+                    bias=False,
+                    indice_key=f'spconv{indice_key_id}',
+                    algo=ConvAlgo.Native,
+                ),
             )
 
             window_size_scale_cubic, window_size_scale_sphere = window_size_scale
@@ -160,12 +173,25 @@ class UBlock(nn.Module):
             self.deconv = spconv.SparseSequential(
                 norm_fn(nPlanes[1]),
                 nn.ReLU(),
-                spconv.SparseInverseConv3d(nPlanes[1], nPlanes[0], kernel_size=2, bias=False, indice_key='spconv{}'.format(indice_key_id), algo=ConvAlgo.Native)
+                spconv.SparseInverseConv3d(
+                    nPlanes[1],
+                    nPlanes[0],
+                    kernel_size=2,
+                    bias=False,
+                    indice_key=f'spconv{indice_key_id}',
+                    algo=ConvAlgo.Native,
+                ),
             )
 
-            blocks_tail = {}
-            for i in range(block_reps):
-                blocks_tail['block{}'.format(i)] = block(nPlanes[0] * (2 - i), nPlanes[0], norm_fn, indice_key='subm{}'.format(indice_key_id))
+            blocks_tail = {
+                f'block{i}': block(
+                    nPlanes[0] * (2 - i),
+                    nPlanes[0],
+                    norm_fn,
+                    indice_key=f'subm{indice_key_id}',
+                )
+                for i in range(block_reps)
+            }
             blocks_tail = OrderedDict(blocks_tail)
             self.blocks_tail = spconv.SparseSequential(blocks_tail)
 
@@ -227,11 +253,7 @@ class Semantic(nn.Module):
 
         norm_fn = functools.partial(nn.BatchNorm1d, eps=1e-4, momentum=0.1)
 
-        if block_residual:
-            block = ResidualBlock
-        else:
-            block = VGGBlock
-
+        block = ResidualBlock if block_residual else VGGBlock
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, 7)]
 
         #### backbone
@@ -285,7 +307,5 @@ class Semantic(nn.Module):
         output = self.unet(output, xyz, batch)
         output = self.output_layer(output)
 
-        #### semantic segmentation
-        semantic_scores = self.linear(output.features)   # (N, nClass), float
-        return semantic_scores
+        return self.linear(output.features)
 

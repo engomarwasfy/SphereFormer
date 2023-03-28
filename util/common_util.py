@@ -182,8 +182,7 @@ def smooth_loss(output, target, eps=0.1):
     w = torch.zeros_like(output).scatter(1, target.unsqueeze(1), 1)
     w = w * (1 - eps) + (1 - w) * eps / (output.shape[1] - 1)
     log_prob = F.log_softmax(output, dim=1)
-    loss = (-w * log_prob).sum(dim=1).mean()
-    return loss
+    return (-w * log_prob).sum(dim=1).mean()
 
 
 class Timer:
@@ -196,5 +195,5 @@ class Timer:
 
     def __exit__(self, type, value, traceback):
         torch.cuda.synchronize()
-        print(self.message + ": {}s".format(time.time() - self.t))
+        print(f"{self.message}: {time.time() - self.t}s")
         

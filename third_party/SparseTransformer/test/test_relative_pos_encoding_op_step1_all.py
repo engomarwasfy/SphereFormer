@@ -1,8 +1,8 @@
 import torch
 import pointops
 from torch_scatter import scatter_max, scatter_mean, scatter_add, scatter_min, scatter_sum
-import sys 
-sys.path.append("..") 
+import sys
+sys.path.append("..")
 import sptr
 
 torch.manual_seed(1)
@@ -70,7 +70,7 @@ index_k = index_k.long()
 # print("v1 index_q_offsets.shape: ", index_q_offsets.shape)
 
 # index_q_offsets = torch.cat([torch.zeros(1, dtype=torch.long).cuda(), index_q_offsets], 0) #[N+1]
-        
+
 # print("index_q[:100]: ", index_q[:100])
 print("n_max: ", n_max)
 print("index_q_offsets.shape: ", index_q_offsets.shape)
@@ -92,7 +92,7 @@ output = output1 + output2 + attn_flat
 loss = output.mean()
 loss.backward()
 
-print("output.shape: {}, output[:5,:10]: {}".format(output.shape, output[:5,:10]))
+print(f"output.shape: {output.shape}, output[:5,:10]: {output[:5, :10]}")
 print("query.grad[:5, :3, :5]: ", query.grad[:5, :3, :5])
 print("table_q.grad[:5, :3, :5, :2]: ", table_q.grad[:5, :3, :5, :2])
 print("key.grad[:5, :3, :5]: ", key.grad[:5, :3, :5])

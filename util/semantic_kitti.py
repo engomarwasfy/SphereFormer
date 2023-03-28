@@ -134,10 +134,7 @@ class SemanticKITTI(torch.utils.data.Dataset):
 
         # random data augmentation by flip x , y or x+y
         if self.flip_aug:
-            if self.use_tta:
-                flip_type = vote_idx % 4
-            else:
-                flip_type = np.random.choice(4, 1)
+            flip_type = vote_idx % 4 if self.use_tta else np.random.choice(4, 1)
             if flip_type == 1:
                 points[:, 0] = -points[:, 0]
             elif flip_type == 2:
@@ -149,13 +146,13 @@ class SemanticKITTI(torch.utils.data.Dataset):
             noise_scale = np.random.uniform(self.scale_params[0], self.scale_params[1])
             points[:, 0] = noise_scale * points[:, 0]
             points[:, 1] = noise_scale * points[:, 1]
-            
+
         if self.transform_aug:
             noise_translate = np.array([np.random.normal(0, self.trans_std[0], 1),
                                         np.random.normal(0, self.trans_std[1], 1),
                                         np.random.normal(0, self.trans_std[2], 1)]).T
             points[:, 0:3] += noise_translate
-            
+
         if self.elastic_aug:
             points[:, 0:3] = elastic(points[:, 0:3], self.elastic_gran[0], self.elastic_mag[0])
             points[:, 0:3] = elastic(points[:, 0:3], self.elastic_gran[1], self.elastic_mag[1])
