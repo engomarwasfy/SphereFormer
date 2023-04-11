@@ -1,5 +1,5 @@
 import numpy as np
-from collections import Sequence
+#from collections import Sequence
 
 def fnv_hash_vec(arr):
     """

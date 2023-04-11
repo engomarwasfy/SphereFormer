@@ -1,6 +1,6 @@
 DATA:
   data_name: semantic_kitti
-  data_root: YOUR_DATA_ROOT/SemanticKITTI/dataset ## Fill in the data path 
+  data_root: "/media/wasfy/One\ Touch/TA/drive/All/omarwasfy/Master/Thesis/Datasets/dataset/" ## Fill in the data path
   label_mapping: util/semantic-kitti.yaml
   classes: 19
   fea_dim: 6
@@ -19,12 +19,12 @@ TRAIN:
   patch_size: 1 
   window_size: 6
   use_xyz: True
-  sync_bn: True  # adopt sync_bn or not
+  sync_bn: False  # adopt sync_bn or not
   rel_query: True
   rel_key: True
   rel_value: True
   drop_path_rate: 0.3
-  max_batch_points: 1000000
+  max_batch_points: 10000000
   class_weight: [ 3.1557,  8.7029,  7.8281,  6.1354,  6.3161,  7.9937,  8.9704,
                           10.1922,  1.6155,  4.2187,  1.9385,  5.5455,  2.0198,  2.6261,  1.3212,
                           5.1102,  2.5492,  5.8585,  7.3929]
@@ -32,7 +32,7 @@ TRAIN:
   pc_range: [[-51.2, -51.2, -4], [51.2, 51.2, 2.4]]
   window_size_sphere: [2, 2, 80]
   window_size_scale: [2.0, 1.5]
-  sphere_layers: [1,2,3,4,5]
+  sphere_layers: []
   grad_checkpoint_layers: []
   a: 0.0125
   loss_name: ce_loss
@@ -47,8 +47,8 @@ TRAIN:
 
   power: 0.9
   use_amp: True
-  train_gpu: [0,1,2,3] 
-  workers: 16  # data loader workers 
+  train_gpu: [0]
+  workers: 1  # data loader workers
   batch_size: 8 # batch size for training
   batch_size_val: 8 # batch size for validation during training, memory and speed tradeoff
   base_lr: 0.006 
@@ -72,7 +72,7 @@ TRAIN:
 Distributed:
   dist_url: tcp://127.0.0.1:6789
   dist_backend: 'nccl'
-  multiprocessing_distributed: True
+  multiprocessing_distributed: False
   world_size: 1
   rank: 0
 
