@@ -1,4 +1,6 @@
 #include <vector>
+#include <torch/extension.h>
+#include <ATen/ATen.h>
 #include <torch/serialize/tensor.h>
 #include <ATen/cuda/CUDAContext.h>
 #include "relative_pos_encoding_cuda_kernel.h"
