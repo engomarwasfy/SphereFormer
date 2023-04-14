@@ -232,7 +232,7 @@ def main_worker(gpu, ngpus_per_node, argss):
     elif args.data_name == 'semantic_kitti':
         train_data = SemanticKITTI(args.data_root, 
             voxel_size=args.voxel_size, 
-            split='train', 
+            split='train',
             return_ref=True, 
             label_mapping=args.label_mapping, 
             rotate_aug=True, 
@@ -287,7 +287,7 @@ def main_worker(gpu, ngpus_per_node, argss):
         batch_size=args.batch_size, 
         shuffle=(train_sampler is None), 
         num_workers=args.workers,
-        pin_memory=True, 
+        pin_memory=False,
         sampler=train_sampler, 
         drop_last=True, 
         collate_fn=collate_fn
@@ -307,6 +307,7 @@ def main_worker(gpu, ngpus_per_node, argss):
             xyz_norm=args.xyz_norm, 
             pc_range=args.get("pc_range", None),
             use_tta=args.use_tta,
+            voxel_max= args.voxel_max,
             vote_num=args.vote_num,
         )
     elif args.data_name == 'semantic_kitti':
@@ -318,7 +319,8 @@ def main_worker(gpu, ngpus_per_node, argss):
             scale_aug=args.use_tta, 
             transform_aug=args.use_tta, 
             xyz_norm=args.xyz_norm, 
-            pc_range=args.get("pc_range", None), 
+            pc_range=args.get("pc_range", None),
+            voxel_max=args.voxel_max,
             use_tta=args.use_tta,
             vote_num=args.vote_num,
         )
@@ -331,7 +333,8 @@ def main_worker(gpu, ngpus_per_node, argss):
             scale_aug=args.use_tta, 
             transform_aug=args.use_tta, 
             xyz_norm=args.xyz_norm, 
-            pc_range=args.get("pc_range", None), 
+            pc_range=args.get("pc_range", None),
+            voxel_max=args.voxel_max,
             use_tta=args.use_tta,
             vote_num=args.vote_num,
         )
@@ -351,18 +354,18 @@ def main_worker(gpu, ngpus_per_node, argss):
             batch_size=args.batch_size_val, 
             shuffle=False, 
             num_workers=args.workers, 
-            pin_memory=True, 
+            pin_memory=False,
             sampler=val_sampler, 
-            collate_fn=collation_fn_voxelmean_tta
+            collate_fn=collate_fn
         )
     else:
         val_loader = torch.utils.data.DataLoader(val_data, 
             batch_size=args.batch_size_val, 
             shuffle=False, 
             num_workers=args.workers,
-            pin_memory=True, 
+            pin_memory=False,
             sampler=val_sampler, 
-            collate_fn=collation_fn_voxelmean
+            collate_fn=collate_fn
         )
 
     # set scheduler
@@ -571,7 +574,7 @@ def train(train_loader, model, criterion, optimizer, epoch, scaler, scheduler, g
             writer.add_scalar('mIoU_train_batch', np.mean(intersection / (union + 1e-10)), current_iter)
             writer.add_scalar('mAcc_train_batch', np.mean(intersection / (target + 1e-10)), current_iter)
             writer.add_scalar('allAcc_train_batch', accuracy, current_iter)
-
+        break
     iou_class = intersection_meter.sum / (union_meter.sum + 1e-10)
     accuracy_class = intersection_meter.sum / (target_meter.sum + 1e-10)
     mIoU = np.mean(iou_class)
@@ -580,6 +583,8 @@ def train(train_loader, model, criterion, optimizer, epoch, scaler, scheduler, g
     if main_process():
         logger.info('Train result at epoch [{}/{}]: mIoU/mAcc/allAcc {:.4f}/{:.4f}/{:.4f}.'.format(epoch+1, args.epochs, mIoU, mAcc, allAcc))
     return loss_meter.avg, mIoU, mAcc, allAcc
+
+
 
 
 def validate(val_loader, model, criterion):
@@ -599,11 +604,10 @@ def validate(val_loader, model, criterion):
     model.eval()
     end = time.time()
     for i, batch_data in enumerate(val_loader):
-
+        torch.cuda.empty_cache()
         data_time.update(time.time() - end)
-    
-        (coord, xyz, feat, target, offset, inds_reconstruct) = batch_data
-        inds_reconstruct = inds_reconstruct.cuda(non_blocking=True)
+
+        (coord, xyz, feat, target, offset) = batch_data
 
         offset_ = offset.clone()
         offset_[1:] = offset_[1:] - offset_[:-1]
@@ -611,7 +615,7 @@ def validate(val_loader, model, criterion):
 
         coord = torch.cat([batch.unsqueeze(-1), coord], -1)
         spatial_shape = np.clip((coord.max(0)[0][1:] + 1).numpy(), 128, None)
-    
+
         coord, xyz, feat, target, offset = coord.cuda(non_blocking=True), xyz.cuda(non_blocking=True), feat.cuda(non_blocking=True), target.cuda(non_blocking=True), offset.cuda(non_blocking=True)
         batch = batch.cuda(non_blocking=True)
 
@@ -621,8 +625,7 @@ def validate(val_loader, model, criterion):
         
         with torch.no_grad():
             output = model(sinput, xyz, batch)
-            output = output[inds_reconstruct, :]
-        
+
             if loss_name == 'focal_loss':
                 loss = focal_loss(output, target, criterion.weight, args.ignore_label, args.loss_gamma)
             elif loss_name == 'ce_loss':
@@ -698,8 +701,7 @@ def validate_tta(val_loader, model, criterion):
             output = 0.0
             for batch_data in batch_data_list:
 
-                (coord, xyz, feat, target, offset, inds_reconstruct) = batch_data
-                inds_reconstruct = inds_reconstruct.cuda(non_blocking=True)
+                (coord, xyz, feat, target, offset) = batch_data
 
                 offset_ = offset.clone()
                 offset_[1:] = offset_[1:] - offset_[:-1]
@@ -716,7 +718,7 @@ def validate_tta(val_loader, model, criterion):
                 assert batch.shape[0] == feat.shape[0]
                 
                 output_i = model(sinput, xyz, batch)
-                output_i = F.softmax(output_i[inds_reconstruct, :], -1)
+                output_i = F.softmax(output_i, -1)
                 
                 output = output + output_i
             output = output / len(batch_data_list)
@@ -795,10 +797,10 @@ def validate_distance(val_loader, model, criterion):
     end = time.time()
     for i, batch_data in enumerate(val_loader):
 
+        torch.cuda.empty_cache()
         data_time.update(time.time() - end)
     
-        (coord, xyz, feat, target, offset, inds_reverse) = batch_data
-        inds_reverse = inds_reverse.cuda(non_blocking=True)
+        (coord, xyz, feat, target, offset) = batch_data
 
         offset_ = offset.clone()
         offset_[1:] = offset_[1:] - offset_[:-1]
@@ -816,7 +818,6 @@ def validate_distance(val_loader, model, criterion):
         
         with torch.no_grad():
             output = model(sinput, xyz, batch)
-            output = output[inds_reverse, :]
         
             if loss_name == 'focal_loss':
                 loss = focal_loss(output, target, criterion.weight, args.ignore_label, args.loss_gamma)
@@ -835,7 +836,6 @@ def validate_distance(val_loader, model, criterion):
             loss /= n
 
         r = torch.sqrt(feat[:, 0] ** 2 + feat[:, 1] ** 2 + feat[:, 2] ** 2)
-        r = r[inds_reverse]
         
         # For validation on points with different distance
         masks = [r <= 20, (r > 20) & (r <= 50), r > 50]

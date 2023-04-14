@@ -5,7 +5,7 @@ from torch_scatter import scatter_mean
 from util.voxelize import voxelize
 
 def collate_fn_limit(batch, max_batch_points, logger):
-    coord, xyz, feat, label = list(zip(*batch))
+    coord, xyz, feat, label= list(zip(*batch))
     offset, count = [], 0
     
     new_coord, new_xyz, new_feat, new_label = [], [], [], []
@@ -95,7 +95,7 @@ def data_prepare(coord, feat, label, split='train', voxel_size=np.array([0.1, 0.
     coord_min = np.min(coord, 0)
     # coord -= coord_min
     coord_norm = coord - coord_min
-    if split == 'train':
+    if split == 'train' or True:
         uniq_idx = voxelize(coord_norm, voxel_size)
         coord_voxel = np.floor(coord_norm[uniq_idx] / np.array(voxel_size))
         coord, feat, label = coord[uniq_idx], feat[uniq_idx], label[uniq_idx]
@@ -114,7 +114,7 @@ def data_prepare(coord, feat, label, split='train', voxel_size=np.array([0.1, 0.
     coord = torch.FloatTensor(coord)
     feat = torch.FloatTensor(feat)
     label = torch.LongTensor(label)
-    if split == 'train':
+    if split == 'train' or True:
         coord_voxel = torch.LongTensor(coord_voxel)
         return coord_voxel, coord, feat, label
     else:

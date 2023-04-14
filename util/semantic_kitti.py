@@ -168,7 +168,7 @@ class SemanticKITTI(torch.utils.data.Dataset):
         if self.pc_range is not None:
             xyz = np.clip(xyz, self.pc_range[0], self.pc_range[1])
 
-        if self.split == 'train':
+        if self.split == 'train' or True:
             coords, xyz, feats, labels = data_prepare(xyz, feats, labels_in, self.split, self.voxel_size, self.voxel_max, None, self.xyz_norm)
             return coords, xyz, feats, labels
         else:
