@@ -1,11 +1,11 @@
 DATA:
   data_name: semantic_kitti
-  data_root: "/media/wasfy/One\ Touch/TA/drive/All/omarwasfy/Master/Thesis/Datasets/dataset/" ## Fill in the data path
+  data_root: /media/wasfy/data/drive/All/omarwasfy/Master/Thesis/Datasets/dataset
   label_mapping: util/semantic-kitti.yaml
   classes: 19
   fea_dim: 6
-  voxel_size: [0.05, 0.05, 0.05]
-  voxel_max: 6500
+  voxel_size: [0.3, 0.3, 0.3]
+  voxel_max: 120000
 
 TRAIN:
   # arch
@@ -16,19 +16,19 @@ TRAIN:
   block_residual: True
   layers: [32, 64, 128, 256, 256]
   quant_size_scale: 24
-  patch_size: 1 
+  patch_size: 1
   window_size: 6
   use_xyz: True
-  sync_bn: True #adopt sync_bn or not
+  sync_bn: True  # adopt sync_bn or not
   rel_query: True
   rel_key: True
   rel_value: True
   drop_path_rate: 0.3
-  max_batch_points: 10000000
+  max_batch_points: 1000000
   class_weight: [ 3.1557,  8.7029,  7.8281,  6.1354,  6.3161,  7.9937,  8.9704,
                           10.1922,  1.6155,  4.2187,  1.9385,  5.5455,  2.0198,  2.6261,  1.3212,
                           5.1102,  2.5492,  5.8585,  7.3929]
-  xyz_norm: True
+  xyz_norm: False
   pc_range: [[-51.2, -51.2, -4], [51.2, 51.2, 2.4]]
   window_size_sphere: [2, 2, 80]
   window_size_scale: [2.0, 1.5]
@@ -41,21 +41,21 @@ TRAIN:
 
   # training
   aug: True
-  transformer_lr_scale: 0.1 
-  scheduler_update: step 
+  transformer_lr_scale: 0.1
+  scheduler_update: step
   scheduler: Poly
 
   power: 0.9
   use_amp: True
-  train_gpu: [0]
-  workers: 1  # data loader workers
-  batch_size: 32 # batch size for training
-  batch_size_val: 1 # batch size for validation during training, memory and speed tradeoff
-  base_lr: 0.006 
-  epochs: 50 
+  train_gpu: [0,1,2]
+  workers: 16  # data loader workers
+  batch_size: 3 # batch size for training
+  batch_size_val: 3 # batch size for validation during training, memory and speed tradeoff
+  base_lr: 0.006
+  epochs: 50
   start_epoch: 0
   momentum: 0.9
-  weight_decay: 0.02 
+  weight_decay: 0.02
   drop_rate: 0.5
 
   ignore_label: 255
@@ -63,16 +63,16 @@ TRAIN:
   print_freq: 10
   save_freq: 1
   save_path: runs/semantic_kitti_unet32_spherical_transformer
-  weight:  model_semantic_kitti.pth # path to initial weight (default: none)
+  weight:  # path to initial weight (default: none)
   resume:  # path to latest checkpoint (default: none)
   evaluate: False  # evaluate on validation set, extra gpu memory needed and small batch_size_val is recommend
   eval_freq: 1
-  val: True
-  
+  val: False
+
 Distributed:
   dist_url: tcp://127.0.0.1:6789
   dist_backend: 'nccl'
-  multiprocessing_distributed: False
+  multiprocessing_distributed: True
   world_size: 1
   rank: 0
 

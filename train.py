@@ -899,4 +899,5 @@ def validate_distance(val_loader, model, criterion):
 if __name__ == '__main__':
     import gc
     gc.collect()
+    torch.cuda.empty_cache()
     main()
